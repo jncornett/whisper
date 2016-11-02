@@ -29,5 +29,5 @@ func (q *eventTransponder) Serve(cb Handler) {
 }
 
 func NewEventTransponder(peers PeerSet, bufsize int) EventTransponder {
-	return &eventTransponder{peers: peers}
+	return &eventTransponder{peers: peers, messages: make(chan Message, bufsize)}
 }

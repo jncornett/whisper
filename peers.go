@@ -16,6 +16,7 @@ type PeerSet interface {
 	Lookup(string) Peer
 	GetAll() []Peer
 	Expire(time.Duration)
+	Empty() bool
 }
 
 type SyncedPeerSet struct {
@@ -77,4 +78,11 @@ func (ps *SyncedPeerSet) Expire(maxAge time.Duration) {
 			ps.Remove(peer.Address)
 		}
 	}
+}
+
+func (ps *SyncedPeerSet) Empty() bool {
+	if ps == nil {
+		return true
+	}
+	return len(ps.peers) == 0
 }
