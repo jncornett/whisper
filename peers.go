@@ -10,12 +10,23 @@ type Peer struct {
 	LastUpdated time.Time
 }
 
-type PeerSet struct {
+type PeerSet interface {
+	Add(Peer)
+	Remove(string)
+	Lookup(string) Peer
+	GetAll() []Peer
+	Expire(time.Duration)
+}
+
+type SyncedPeerSet struct {
 	peers map[string]Peer
 	mux   sync.RWMutex
 }
 
-func (ps *PeerSet) Add(peer Peer) {
+func (ps *SyncedPeerSet) Add(peer Peer) {
+	if ps == nil {
+		return
+	}
 	ps.mux.Lock()
 	defer ps.mux.Unlock()
 	if ps.peers == nil {
@@ -24,20 +35,29 @@ func (ps *PeerSet) Add(peer Peer) {
 	ps.peers[peer.Address] = peer
 }
 
-func (ps *PeerSet) Remove(address string) {
+func (ps *SyncedPeerSet) Remove(address string) {
+	if ps == nil {
+		return
+	}
 	ps.mux.Lock()
 	defer ps.mux.Unlock()
 	delete(ps.peers, address)
 }
 
-func (ps *PeerSet) Lookup(address string) Peer {
+func (ps *SyncedPeerSet) Lookup(address string) Peer {
+	if ps == nil {
+		return Peer{}
+	}
 	ps.mux.RLock()
 	defer ps.mux.RUnlock()
 	peer, _ := ps.peers[address]
 	return peer
 }
 
-func (ps *PeerSet) GetAll() []Peer {
+func (ps *SyncedPeerSet) GetAll() []Peer {
+	if ps == nil {
+		return []Peer{}
+	}
 	// get the write lock so that the map doesn't change size
 	ps.mux.Lock()
 	defer ps.mux.Unlock()
@@ -46,4 +66,15 @@ func (ps *PeerSet) GetAll() []Peer {
 		list = append(list, peer)
 	}
 	return list
+}
+
+func (ps *SyncedPeerSet) Expire(maxAge time.Duration) {
+	if ps == nil {
+		return
+	}
+	for _, peer := range ps.GetAll() {
+		if time.Since(peer.LastUpdated) > maxAge {
+			ps.Remove(peer.Address)
+		}
+	}
 }
